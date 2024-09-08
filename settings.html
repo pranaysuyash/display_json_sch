@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Selector</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+
+        .checkbox-container {
+            margin-bottom: 20px;
+        }
+
+        /* Update the body for a better background and padding */
+        body {
+            background-color: #f3f4f6;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        /* Container styling */
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        /* Headings */
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 24px;
+            font-weight: 500;
+        }
+
+        /* Card styles for checkboxes */
+        .card {
+            background-color: #f9fafb;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: #444;
+            font-size: 16px;
+        }
+
+        .subkeys {
+            margin-left: 20px;
+        }
+
+        /* Checkbox container improvements */
+        .checkbox-container label {
+            display: block;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        /* Submit button styling */
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Select all checkbox */
+        .select-all-container {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .select-all {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Select Data Keys</h2>
+
+        <!-- Select All Option -->
+        <div class="select-all-container">
+            <input type="checkbox" id="select-all" class="select-all">
+            <label for="select-all">Select All</label>
+        </div>
+
+        <!-- Checkboxes will be dynamically generated here -->
+        <div id="checkbox-container" class="checkbox-container"></div>
+
+        <!-- Submit Button -->
+        <button class="submit-btn" onclick="submitSelections()">Submit Selections</button>
+    </div>
+
+    <script>
+        const checkboxContainer = document.getElementById('checkbox-container');
+        const selectAllCheckbox = document.getElementById('select-all');
+
+        // Function to generate checkboxes based on the JSON schema
+        function generateCheckboxes(obj, parentElement, parentKey = '') {
+    Object.keys(obj).forEach(key => {
+        const value = obj[key];
+        let checkboxId = parentKey ? `${parentKey}-${key}` : key;
+
+        const checkboxWrapper = document.createElement('div');
+        checkboxWrapper.classList.add('card');
+
+        const checkboxLabel = document.createElement('label');
+        checkboxLabel.classList.add('card-header');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = checkboxId;
+        checkboxLabel.textContent = key;
+        checkboxLabel.prepend(checkbox);
+
+        checkboxWrapper.appendChild(checkboxLabel);
+        parentElement.appendChild(checkboxWrapper);
+
+        // Subkey container
+        const subkeyContainer = document.createElement('div');
+        subkeyContainer.classList.add('subkeys');
+        subkeyContainer.style.display = 'none'; // Hide subkeys initially
+        checkboxWrapper.appendChild(subkeyContainer);
+
+        // Generate subkey checkboxes if the value is an object or array
+        if (typeof value === 'object' && value !== null) {
+            if (Array.isArray(value)) {
+                value.forEach((item, index) => {
+                    generateCheckboxes(item, subkeyContainer, `${checkboxId}-${index}`);
+                });
+            } else {
+                generateCheckboxes(value, subkeyContainer, checkboxId);
+            }
+        }
+
+        // Toggle subkey visibility when top-level checkbox is clicked
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                subkeyContainer.style.display = 'block';  // Show subkeys if checked
+            } else {
+                subkeyContainer.style.display = 'none';   // Hide subkeys if unchecked
+            }
+        });
+    });
+}
+
+
+        // Load JSON schema from the file (replace with actual path or API)
+        fetch('transcript_schema.json')
+            .then(response => response.json())
+            .then(schemaData => {
+                generateCheckboxes(schemaData, checkboxContainer);
+            })
+            .catch(error => console.error('Error loading schema:', error));
+
+        // Function to toggle all checkboxes based on Select All
+        selectAllCheckbox.addEventListener('change', function () {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+        });
+
+        // Function to gather selected checkboxes and store in localStorage
+        function submitSelections() {
+            const selectedKeys = [];
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                selectedKeys.push(checkbox.id);
+            });
+
+            // Store selections in localStorage (or send to backend)
+            localStorage.setItem('selectedKeys', JSON.stringify(selectedKeys));
+
+            // Redirect to data display page
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+
+</body>
+
+</html>

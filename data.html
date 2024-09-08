@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Display</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+        body {
+            background-color: #f0f4f8;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .data-card {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .data-card-header {
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .data-content {
+            margin-left: 20px;
+        }
+
+        .no-data {
+            color: #888;
+        }
+
+        .expandable {
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .expandable:hover {
+            background-color: #f0f4f8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Selected Data</h2>
+
+        <!-- Data will be dynamically generated here -->
+        <div id="data-container"></div>
+    </div>
+
+    <script>
+        const dataContainer = document.getElementById('data-container');
+        const selectedPatientName = localStorage.getItem('selectedPatientName');
+        const selectedKeys = JSON.parse(localStorage.getItem('selectedKeys'));
+
+        console.log('Selected Patient Name:', selectedPatientName);
+        console.log('Selected Keys:', selectedKeys);
+
+        // Fetch the full data file
+        fetch('final_analysis_cleaned_chunk_cleaned_chunk_1.wav.json')
+            .then(response => response.json())
+            .then(data => {
+                const participants = data.participants || [];
+                const patient = participants.find(p => p.name === selectedPatientName);
+
+                if (patient) {
+                    displayData(selectedKeys, data, patient, dataContainer);
+                } else {
+                    dataContainer.textContent = 'No data found for this patient.';
+                }
+            })
+            .catch(error => console.error('Error loading data:', error));
+
+        // Function to display data based on selected keys
+        function displayData(keys, fullData, patientData, parentElement) {
+            keys.forEach(key => {
+                const keyParts = key.split('-');  // Split key into parts for nested levels
+                let currentData = fullData;
+
+                // Traverse through the JSON to get the correct value for the key
+                for (let part of keyParts) {
+                    if (part.match(/^\d+$/)) {
+                        // If part is a number, it's an array index (e.g., healthcare_providers-0)
+                        part = parseInt(part);
+                    }
+                    currentData = currentData[part];
+                    if (currentData === undefined) {
+                        break;
+                    }
+                }
+
+                // If it's a valid key, display the data
+                if (currentData !== undefined) {
+                    const card = document.createElement('div');
+                    card.classList.add('data-card', 'expandable');
+
+                    const cardHeader = document.createElement('div');
+                    cardHeader.classList.add('data-card-header');
+                    cardHeader.textContent = keyParts[keyParts.length - 1];  // Show last part as header
+                    card.appendChild(cardHeader);
+
+                    if (typeof currentData === 'object' && currentData !== null) {
+                        const subCard = document.createElement('div');
+                        subCard.classList.add('data-content');
+                        subCard.style.display = 'none';
+
+                        // Traverse and display object keys
+                        for (const [subKey, subValue] of Object.entries(currentData)) {
+                            const subElement = document.createElement('div');
+                            subElement.textContent = `${subKey}: ${subValue}`;
+                            subCard.appendChild(subElement);
+                        }
+
+                        card.appendChild(subCard);
+
+                        card.addEventListener('click', () => {
+                            subCard.style.display = subCard.style.display === 'none' ? 'block' : 'none';
+                        });
+                    } else {
+                        const dataContent = document.createElement('div');
+                        dataContent.classList.add('data-content');
+                        dataContent.textContent = currentData || 'No data available';
+                        card.appendChild(dataContent);
+                    }
+
+                    parentElement.appendChild(card);
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

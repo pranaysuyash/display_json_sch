@@ -37,12 +37,11 @@
         }
 
         .data-card {
-            background-color: #f9fafb;
+            background-color: #f9f9f9;
             padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
 
         .data-card-header {
@@ -52,7 +51,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: #444;
         }
 
         .data-card-header::after {
@@ -66,19 +64,15 @@
         }
 
         .data-content {
-            margin-left: 20px;
-            /* Remove fixed height */
-            max-height: 500px;
-            /* Allow enough height for content */
-            overflow-y: auto;
-            /* Enable vertical scrolling if content exceeds the limit */
+            margin-left: 15px;
+            max-height: 0;
+            overflow: hidden;
             transition: max-height 0.3s ease, opacity 0.3s ease;
             opacity: 0;
         }
 
         .data-card.expanded .data-content {
             max-height: 1000px;
-            /* Large enough for expanded content */
             opacity: 1;
         }
 
@@ -87,35 +81,24 @@
             font-style: italic;
         }
 
-        .array-dropdown {
-            background-color: #f9fafb;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .array-dropdown-header {
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .array-item {
+            margin-bottom: 5px;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 4px;
         }
 
         .array-dropdown-content {
+            margin-left: 10px;
             display: none;
-            margin-left: 20px;
         }
 
-        .array-dropdown.expanded .array-dropdown-content {
-            display: block;
+        ul {
+            list-style-type: none;
+            padding: 0;
         }
 
-        .array-item {
-            background-color: #e9ecef;
-            padding: 5px;
-            border-radius: 5px;
+        li {
             margin-bottom: 5px;
         }
     </style>
@@ -129,60 +112,70 @@
 
     <script>
         const dataContainer = document.getElementById('data-container');
+
+        // Retrieve the selected keys from localStorage
         const selectedPatientName = localStorage.getItem('selectedPatientName');
-        const selectedKeys = JSON.parse(localStorage.getItem('selectedKeys'));
+        const selectedKeys = JSON.parse(localStorage.getItem('selectedKeys')) || [];  // Ensure this exists
 
         console.log('Selected Patient Name:', selectedPatientName);
         console.log('Selected Keys:', selectedKeys);
 
+        // Function to check if the key is selected
         function isKeySelected(key) {
-            return selectedKeys.includes(key) || selectedKeys.some(selectedKey => selectedKey.startsWith(key));
+            return selectedKeys.some(selectedKey => selectedKey.startsWith(key));
         }
 
         // Updated displayArrayItems with dropdown feature
         function displayArrayItems(arrayData, parentElement, key) {
-    const arrayDropdown = document.createElement('div');
-    arrayDropdown.classList.add('array-dropdown');
+            const arrayDropdown = document.createElement('div');
+            arrayDropdown.classList.add('array-dropdown');
 
-    const dropdownHeader = document.createElement('div');
-    dropdownHeader.classList.add('array-dropdown-header');
-    dropdownHeader.textContent = `${key.split('-').pop()} (${arrayData.length} items)`;
-    arrayDropdown.appendChild(dropdownHeader);
+            const dropdownHeader = document.createElement('div');
+            dropdownHeader.classList.add('array-dropdown-header');
+            dropdownHeader.textContent = `${key.split('-').pop()} (${arrayData.length} items)`;
+            arrayDropdown.appendChild(dropdownHeader);
 
-    const dropdownContent = document.createElement('div');
-    dropdownContent.classList.add('array-dropdown-content');
-    dropdownContent.style.display = 'none'; // Hide initially
+            const dropdownContent = document.createElement('div');
+            dropdownContent.classList.add('array-dropdown-content');
+            dropdownContent.style.display = 'none'; // Hide initially
 
-    arrayData.forEach((item, index) => {
-        const arrayItem = document.createElement('div');
-        arrayItem.classList.add('array-item');
+            arrayData.forEach((item, index) => {
+                const arrayItem = document.createElement('div');
+                arrayItem.classList.add('array-item');
 
-        // Structured display using a list
-        if (typeof item === 'object' && item !== null) {
-            const eventList = document.createElement('ul'); // List to display array objects
-            Object.entries(item).forEach(([subKey, subValue]) => {
-                const listItem = document.createElement('li');
-                listItem.innerHTML = `<strong>${subKey}</strong>: ${subValue}`;
-                eventList.appendChild(listItem);
+                // Structured display using a list
+                if (typeof item === 'object' && item !== null) {
+                    const eventList = document.createElement('ul');
+                    Object.entries(item).forEach(([subKey, subValue]) => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `<strong>${subKey}</strong>: ${subValue}`;
+                        eventList.appendChild(listItem);
+                    });
+                    arrayItem.appendChild(eventList);
+                } else {
+                    arrayItem.textContent = item;
+                }
+
+                dropdownContent.appendChild(arrayItem);
             });
-            arrayItem.appendChild(eventList);
-        } else {
-            arrayItem.textContent = item;
+
+            arrayDropdown.appendChild(dropdownContent);
+            parentElement.appendChild(arrayDropdown);
+
+            // Toggle dropdown visibility on click
+            dropdownHeader.addEventListener('click', () => {
+                const isExpanding = dropdownContent.style.display === 'none';
+                dropdownContent.style.display = isExpanding ? 'block' : 'none';
+
+                // Find the ancestor card and toggle its 'expanded' class
+                const card = arrayDropdown.closest('.data-card');
+                if (card) {
+                    card.classList.toggle('expanded', isExpanding);
+                }
+            });
         }
 
-        dropdownContent.appendChild(arrayItem);
-    });
-
-    arrayDropdown.appendChild(dropdownContent);
-    parentElement.appendChild(arrayDropdown);
-
-    // Toggle dropdown visibility on click
-    dropdownHeader.addEventListener('click', () => {
-        dropdownContent.style.display = dropdownContent.style.display === 'none' ? 'block' : 'none';
-    });
-}
-
-
+        // Function to display the selected data
         function displayData(key, data, parentElement) {
             if (!isKeySelected(key)) return;
 
@@ -191,38 +184,36 @@
 
             const cardHeader = document.createElement('div');
             cardHeader.classList.add('data-card-header');
-            cardHeader.textContent = key.split('-').pop();
+            cardHeader.textContent = key.split('-').pop(); // Only show key once
             card.appendChild(cardHeader);
 
             const content = document.createElement('div');
             content.classList.add('data-content');
+            content.style.display = 'none';
 
-            if (data === undefined || data === null) {
-                content.textContent = 'No data available';
-                content.classList.add('no-data');
-            } else if (Array.isArray(data)) {
-                displayArrayItems(data, content, key); // Handle array items properly
+            if (Array.isArray(data)) {
+                displayArrayItems(data, content, key);
             } else if (typeof data === 'object') {
                 Object.entries(data).forEach(([subKey, subValue]) => {
                     const fullKey = `${key}-${subKey}`;
-                    displayData(fullKey, subValue, content);
+                    displayData(fullKey, subValue, content); // Recursively display subkeys
                 });
             } else {
                 content.textContent = data;
             }
 
-            if (content.children.length > 0 || content.textContent) {
-                card.appendChild(content);
-            }
-
+            card.appendChild(content);
             parentElement.appendChild(card);
 
             cardHeader.addEventListener('click', () => {
-                card.classList.toggle('expanded');
+                const isExpanding = content.style.display === 'none';
+                content.style.display = isExpanding ? 'block' : 'none';
+
+                card.classList.toggle('expanded', isExpanding);
             });
         }
 
-        // Fetch patient data
+        // Fetch the data and render based on selected keys
         fetch('final_analysis_cleaned_chunk_cleaned_chunk_1.wav.json')
             .then(response => response.json())
             .then(data => {
@@ -247,6 +238,7 @@
                 dataContainer.textContent = 'An error occurred while loading the data: ' + error.message;
             });
     </script>
+
 </body>
 
 </html>

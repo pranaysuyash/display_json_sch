@@ -17,13 +17,12 @@
             padding: 20px;
             display: flex;
             justify-content: center;
-            font-family: 'Roboto', sans-serif;
         }
         .container {
-            background-color: #fff;
+            background-color: #ffffff;
             padding: 30px;
             border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             max-width: 900px;
             width: 100%;
         }
@@ -34,31 +33,49 @@
         }
         .data-card {
             background-color: #f9fafb;
-            padding: 15px;
+            padding: 20px;
+            border-radius: 10px;
             margin-bottom: 15px;
-            border-radius: 8px;
+            transition: all 0.3s ease;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            transition: background-color 0.3s ease;
         }
         .data-card-header {
             font-weight: 500;
-            margin-bottom: 10px;
-            color: #444;
-            font-size: 16px;
+            margin-bottom: 5px;
             cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #444;
+        }
+        .data-card-header::after {
+            content: '▼';
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        .data-card.expanded .data-card-header::after {
+            transform: rotate(180deg);
         }
         .data-content {
             margin-left: 20px;
-            display: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
         }
         .data-card.expanded .data-content {
-            display: block;
+            max-height: 1000px;
+            opacity: 1;
         }
         .no-data {
             color: #888;
             font-style: italic;
+        }
+        .array-item {
+            margin-bottom: 5px;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -77,7 +94,7 @@
         console.log('Selected Keys:', selectedKeys);
 
         function isKeySelected(key) {
-            return selectedKeys.some(selectedKey => selectedKey.startsWith(key));
+            return selectedKeys.includes(key) || selectedKeys.some(selectedKey => selectedKey.startsWith(key));
         }
 
         function displayData(key, data, parentElement) {
@@ -98,17 +115,39 @@
                 content.textContent = 'No data available';
                 content.classList.add('no-data');
             } else if (Array.isArray(data)) {
+                // Display each array item only if its subkeys are selected
                 data.forEach((item, index) => {
-                    const itemElement = document.createElement('div');
-                    itemElement.textContent = `${index}: ${item}`;
-                    content.appendChild(itemElement);
+                    const arrayItemKey = `${key}-${index}`;
+                    if (isKeySelected(arrayItemKey)) {
+                        const itemElement = document.createElement('div');
+                        itemElement.classList.add('array-item');
+
+                        if (typeof item === 'object' && item !== null) {
+                            // Show object properties in the array
+                            Object.entries(item).forEach(([subKey, subValue]) => {
+                                const fullSubKey = `${arrayItemKey}-${subKey}`;
+                                if (isKeySelected(fullSubKey)) {
+                                    const subValueElement = document.createElement('div');
+                                    subValueElement.innerHTML = `<strong>${subKey}:</strong> ${subValue}`;
+                                    itemElement.appendChild(subValueElement);
+                                }
+                            });
+                        } else {
+                            // Display the array item if it's not an object
+                            itemElement.textContent = item;
+                        }
+
+                        content.appendChild(itemElement);
+                    }
                 });
             } else if (typeof data === 'object') {
+                // If it's an object, recursively display subkeys
                 Object.entries(data).forEach(([subKey, subValue]) => {
                     const fullKey = `${key}-${subKey}`;
                     displayData(fullKey, subValue, content);
                 });
             } else {
+                // For primitive data, just show the value
                 content.textContent = data;
             }
 
@@ -118,18 +157,17 @@
 
             parentElement.appendChild(card);
 
-            // Toggle data content on click
-            cardHeader.addEventListener('click', (event) => {
-                event.stopPropagation();
+            // Toggle visibility of content on click
+            cardHeader.addEventListener('click', () => {
                 card.classList.toggle('expanded');
             });
         }
 
-        // Fetch the JSON data
+        // Fetch the data for the selected patient
         fetch('final_analysis_cleaned_chunk_cleaned_chunk_1.wav.json')
             .then(response => response.json())
             .then(data => {
-                const patient = data;
+                const patient = data; // Assuming the data is already filtered for the patient
 
                 if (patient) {
                     Object.keys(patient).forEach(key => {

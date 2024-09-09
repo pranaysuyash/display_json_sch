@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,33 +13,38 @@
             padding: 0;
             font-family: 'Roboto', sans-serif;
         }
+
         body {
-            background-color: #f3f4f6;
+            background-color: #f0f4f8;
             padding: 20px;
             display: flex;
             justify-content: center;
         }
+
         .container {
             background-color: #ffffff;
             padding: 30px;
-            border-radius: 15px;
+            border-radius: 10px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             max-width: 900px;
             width: 100%;
         }
+
         h2 {
             text-align: center;
             margin-bottom: 20px;
             color: #333;
         }
+
         .data-card {
             background-color: #f9fafb;
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
             margin-bottom: 15px;
             transition: all 0.3s ease;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
+
         .data-card-header {
             font-weight: 500;
             margin-bottom: 5px;
@@ -48,37 +54,73 @@
             align-items: center;
             color: #444;
         }
+
         .data-card-header::after {
             content: '▼';
             font-size: 12px;
             transition: transform 0.3s ease;
         }
+
         .data-card.expanded .data-card-header::after {
             transform: rotate(180deg);
         }
+
         .data-content {
             margin-left: 20px;
-            max-height: 0;
-            overflow: hidden;
+            /* Remove fixed height */
+            max-height: 500px;
+            /* Allow enough height for content */
+            overflow-y: auto;
+            /* Enable vertical scrolling if content exceeds the limit */
             transition: max-height 0.3s ease, opacity 0.3s ease;
             opacity: 0;
         }
+
         .data-card.expanded .data-content {
             max-height: 1000px;
+            /* Large enough for expanded content */
             opacity: 1;
         }
+
         .no-data {
             color: #888;
             font-style: italic;
         }
+
+        .array-dropdown {
+            background-color: #f9fafb;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .array-dropdown-header {
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .array-dropdown-content {
+            display: none;
+            margin-left: 20px;
+        }
+
+        .array-dropdown.expanded .array-dropdown-content {
+            display: block;
+        }
+
         .array-item {
-            margin-bottom: 5px;
-            padding: 5px;
             background-color: #e9ecef;
-            border-radius: 4px;
+            padding: 5px;
+            border-radius: 5px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h2>Selected Patient Data</h2>
@@ -96,6 +138,50 @@
         function isKeySelected(key) {
             return selectedKeys.includes(key) || selectedKeys.some(selectedKey => selectedKey.startsWith(key));
         }
+
+        // Updated displayArrayItems with dropdown feature
+        function displayArrayItems(arrayData, parentElement, key) {
+    const arrayDropdown = document.createElement('div');
+    arrayDropdown.classList.add('array-dropdown');
+
+    const dropdownHeader = document.createElement('div');
+    dropdownHeader.classList.add('array-dropdown-header');
+    dropdownHeader.textContent = `${key.split('-').pop()} (${arrayData.length} items)`;
+    arrayDropdown.appendChild(dropdownHeader);
+
+    const dropdownContent = document.createElement('div');
+    dropdownContent.classList.add('array-dropdown-content');
+    dropdownContent.style.display = 'none'; // Hide initially
+
+    arrayData.forEach((item, index) => {
+        const arrayItem = document.createElement('div');
+        arrayItem.classList.add('array-item');
+
+        // Structured display using a list
+        if (typeof item === 'object' && item !== null) {
+            const eventList = document.createElement('ul'); // List to display array objects
+            Object.entries(item).forEach(([subKey, subValue]) => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong>${subKey}</strong>: ${subValue}`;
+                eventList.appendChild(listItem);
+            });
+            arrayItem.appendChild(eventList);
+        } else {
+            arrayItem.textContent = item;
+        }
+
+        dropdownContent.appendChild(arrayItem);
+    });
+
+    arrayDropdown.appendChild(dropdownContent);
+    parentElement.appendChild(arrayDropdown);
+
+    // Toggle dropdown visibility on click
+    dropdownHeader.addEventListener('click', () => {
+        dropdownContent.style.display = dropdownContent.style.display === 'none' ? 'block' : 'none';
+    });
+}
+
 
         function displayData(key, data, parentElement) {
             if (!isKeySelected(key)) return;
@@ -115,39 +201,13 @@
                 content.textContent = 'No data available';
                 content.classList.add('no-data');
             } else if (Array.isArray(data)) {
-                // Display each array item only if its subkeys are selected
-                data.forEach((item, index) => {
-                    const arrayItemKey = `${key}-${index}`;
-                    if (isKeySelected(arrayItemKey)) {
-                        const itemElement = document.createElement('div');
-                        itemElement.classList.add('array-item');
-
-                        if (typeof item === 'object' && item !== null) {
-                            // Show object properties in the array
-                            Object.entries(item).forEach(([subKey, subValue]) => {
-                                const fullSubKey = `${arrayItemKey}-${subKey}`;
-                                if (isKeySelected(fullSubKey)) {
-                                    const subValueElement = document.createElement('div');
-                                    subValueElement.innerHTML = `<strong>${subKey}:</strong> ${subValue}`;
-                                    itemElement.appendChild(subValueElement);
-                                }
-                            });
-                        } else {
-                            // Display the array item if it's not an object
-                            itemElement.textContent = item;
-                        }
-
-                        content.appendChild(itemElement);
-                    }
-                });
+                displayArrayItems(data, content, key); // Handle array items properly
             } else if (typeof data === 'object') {
-                // If it's an object, recursively display subkeys
                 Object.entries(data).forEach(([subKey, subValue]) => {
                     const fullKey = `${key}-${subKey}`;
                     displayData(fullKey, subValue, content);
                 });
             } else {
-                // For primitive data, just show the value
                 content.textContent = data;
             }
 
@@ -157,17 +217,16 @@
 
             parentElement.appendChild(card);
 
-            // Toggle visibility of content on click
             cardHeader.addEventListener('click', () => {
                 card.classList.toggle('expanded');
             });
         }
 
-        // Fetch the data for the selected patient
+        // Fetch patient data
         fetch('final_analysis_cleaned_chunk_cleaned_chunk_1.wav.json')
             .then(response => response.json())
             .then(data => {
-                const patient = data; // Assuming the data is already filtered for the patient
+                const patient = data;
 
                 if (patient) {
                     Object.keys(patient).forEach(key => {
@@ -189,4 +248,5 @@
             });
     </script>
 </body>
+
 </html>
